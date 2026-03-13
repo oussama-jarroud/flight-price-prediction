@@ -1,33 +1,33 @@
-"""
-Diagnostic Skyscanner - Phase 2
-Lance le browser en mode VISIBLE pour voir ce qui bloque.
-Exécute ce fichier EN PREMIER avant le scraper principal.
-"""
-
 import asyncio
 import json
 from playwright.async_api import async_playwright
 
-ORIGIN      = "CMN"
+ORIGIN = "CMN"
 DESTINATION = "MAD"
-DATE        = "260320"   # une date dans ~7 jours
+DATE = "260320"
 
 intercepted = []
 
+
 async def handle_response(response):
-    url = response.url
-    # Logger TOUTES les requêtes réseau pour voir ce qui part
-    if response.status in [200, 204]:
-        ct = response.headers.get("content-type", "")
-        if "json" in ct:
-            try:
-                data = await response.json()
-                intercepted.append({"url": url, "data": data})
-                print(f"  [JSON] {url[:100]}")
-            except:
-                pass
-    elif response.status in [403, 429, 503]:
-        print(f"  [BLOCKED {response.status}] {url[:100]}")
+    if response.status in [403, 429, 503]:
+        print(f"  [BLOCKED {response.status}] {response.url[:100]}")
+        return
+
+    if response.status not in [200, 204]:
+        return
+
+    ct = response.headers.get("content-type", "")
+    if "json" not in ct:
+        return
+
+    try:
+        data = await response.json()
+        intercepted.append({"url": response.url, "data": data})
+        print(f"  [JSON] {response.url[:100]}")
+    except Exception:
+        pass
+
 
 async def main():
     url = (
@@ -38,10 +38,8 @@ async def main():
     )
 
     async with async_playwright() as p:
-        browser = await p.chromium.launch(
-            headless=False,   # VISIBLE - tu vas voir le browser s'ouvrir
-            slow_mo=500,
-        )
+        # headless=False pour voir ce qui se passe visuellement
+        browser = await p.chromium.launch(headless=False, slow_mo=500)
 
         context = await browser.new_context(
             user_agent=(
@@ -53,7 +51,6 @@ async def main():
             viewport={"width": 1280, "height": 800},
         )
 
-        # Patch anti-détection
         await context.add_init_script("""
             Object.defineProperty(navigator, 'webdriver', {get: () => undefined});
             window.chrome = { runtime: {} };
@@ -62,80 +59,38 @@ async def main():
         page = await context.new_page()
         page.on("response", handle_response)
 
-        print(f"[→] Ouverture de : {url}\n")
-        print("    Regarde le browser :")
-        print("    - Tu vois une page normale ? → OK, le problème est dans le timing")
-        print("    - Tu vois un captcha / page d'erreur ? → Anti-bot actif")
-        print("    - Page blanche ? → JS bloqué\n")
+        print(f"[→] {url}\n")
+        print("    page normale     → problème de timing")
+        print("    captcha          → anti-bot actif, besoin des cookies")
+        print("    page blanche     → JS bloqué\n")
 
         await page.goto(url, timeout=60000, wait_until="networkidle")
 
-        # Screenshot pour diagnostic
         await page.screenshot(path="debug_screenshot.png", full_page=True)
-        print("\n[SAVED] debug_screenshot.png - regarde cette image")
+        print(f"\n[TITLE] {await page.title()}")
 
-        # Titre de la page
-        title = await page.title()
-        print(f"[PAGE TITLE] {title}")
-
-        # Contenu HTML brut (premier 2000 chars)
-        html = await page.content()
-        print(f"\n[HTML DEBUT]\n{html[:2000]}\n[...]\n")
-
-        # Attendre encore 10s pour voir si les données arrivent
-        print("[WAIT] Attente 10s supplémentaires pour le chargement des vols...")
+        # 10s de plus au cas où les vols chargent en retard
+        print("[WAIT] 10s...")
         await page.wait_for_timeout(10000)
 
-        # Sauvegarder tout ce qui a été intercepté
+        # on sauvegarde juste les URLs + clés, pas les données complètes
         with open("debug_intercepted.json", "w", encoding="utf-8") as f:
-            # Sauvegarder seulement les URLs pour éviter fichier trop gros
-            json.dump(
-                [{"url": x["url"], "keys": list(x["data"].keys()) if isinstance(x["data"], dict) else str(type(x["data"]))}
-                 for x in intercepted],
-                f, indent=2
-            )
+            json.dump([{
+                "url":  x["url"],
+                "keys": list(x["data"].keys()) if isinstance(x["data"], dict) else str(type(x["data"]))
+            } for x in intercepted], f, indent=2)
 
-        print(f"\n[RÉSULTAT] {len(intercepted)} réponses JSON interceptées")
-        if intercepted:
-            print("URLs interceptées :")
-            for x in intercepted:
-                print(f"  → {x['url'][:100]}")
-                print(f"     clés JSON : {list(x['data'].keys()) if isinstance(x['data'], dict) else '?'}")
-        else:
-            print("AUCUNE réponse JSON → Skyscanner bloque avant même d'envoyer les requêtes")
-            print("Solution : voir commentaires dans le code ci-dessous")
+        print(f"\n{len(intercepted)} réponses JSON interceptées")
+        for x in intercepted:
+            print(f"  {x['url'][:100]}")
+            print(f"    clés : {list(x['data'].keys()) if isinstance(x['data'], dict) else '?'}")
+
+        if not intercepted:
+            print("\nrien intercepté — skyscanner bloque tout")
+            print("→ copie _pxvid et _px3 depuis Chrome F12 → Application → Cookies")
 
         await browser.close()
 
-    # ─── SOLUTIONS selon le diagnostic ───
-    print("""
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-SOLUTIONS selon ce que tu observes :
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-CAS 1 - Captcha visible dans le browser :
-  → Utilise playwright-stealth :
-     pip install playwright-stealth
-     from playwright_stealth import stealth_async
-     await stealth_async(page)
-
-CAS 2 - Page normale mais 0 JSON intercepté :
-  → Skyscanner a changé ses endpoints
-  → Relance les DevTools dans ton vrai browser et copie
-     les nouveaux noms d'endpoints (Network → XHR)
-
-CAS 3 - Erreur 403/429 dans les logs :
-  → Rate limiting → ajouter plus de délai
-  → Ou utiliser un vrai cookie de session (voir CAS 4)
-
-CAS 4 - Tout bloqué, rien ne passe :
-  → Solution de secours : copier les cookies depuis
-     ton browser Chrome (F12 → Application → Cookies)
-     et les injecter dans Playwright
-
-CAS 5 - Données dans debug_intercepted.json mais pas parsées :
-  → La structure JSON a changé, il faut adapter le parseur
-    """)
 
 if __name__ == "__main__":
     asyncio.run(main())
