@@ -1,0 +1,37 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.Python
+env/
+venv/
+.env
+
+# Data (optionnel : commenter si tu veux inclure les CSV)
+# data/flights_raw.csv
+# data/flights_clean.csv
+
+# Models (trop lourds pour git)
+models/*.pkl
+
+# Debug files
+debug_*.png
+debug_intercepted.json
+scraping_summary.json
+raw_intercepted.json
+
+# IDE
+.vscode/
+.idea/
+*.code-workspace
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# Logs
+*.log

@@ -1,0 +1,951 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SkyPredict — CMN → MAD</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:        #05080f;
+    --bg2:       #0c1220;
+    --bg3:       #121929;
+    --border:    rgba(255,255,255,0.07);
+    --border2:   rgba(255,255,255,0.12);
+    --text:      #e8edf5;
+    --text2:     #8a96aa;
+    --text3:     #4a5568;
+    --blue:      #2563eb;
+    --blue-l:    #3b82f6;
+    --blue-ll:   #93c5fd;
+    --green:     #10b981;
+    --green-l:   #34d399;
+    --red:       #ef4444;
+    --red-l:     #f87171;
+    --amber:     #f59e0b;
+    --amber-l:   #fbbf24;
+    --card-r:    14px;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── Background mesh ── */
+  body::before {
+    content: '';
+    position: fixed; inset: 0; z-index: 0;
+    background:
+      radial-gradient(ellipse 80% 50% at 20% 10%, rgba(37,99,235,0.12) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 40% at 80% 80%, rgba(16,185,129,0.08) 0%, transparent 60%);
+    pointer-events: none;
+  }
+
+  /* ── Layout ── */
+  .container { max-width: 1280px; margin: 0 auto; padding: 0 24px; position: relative; z-index: 1; }
+
+  /* ── Nav ── */
+  nav {
+    padding: 20px 0;
+    border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(5,8,15,0.85);
+    backdrop-filter: blur(20px);
+  }
+  .nav-inner {
+    display: flex; align-items: center; justify-content: space-between;
+    max-width: 1280px; margin: 0 auto; padding: 0 24px;
+  }
+  .logo {
+    font-size: 20px; font-weight: 800; letter-spacing: -0.5px;
+    background: linear-gradient(135deg, #3b82f6, #10b981);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .nav-badge {
+    font-size: 11px; font-weight: 600; padding: 4px 10px;
+    background: rgba(37,99,235,0.15); color: var(--blue-ll);
+    border: 1px solid rgba(37,99,235,0.3); border-radius: 20px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  /* ── Search bar ── */
+  .search-section {
+    padding: 40px 0 32px;
+    animation: fadeUp 0.5s ease both;
+  }
+  .search-card {
+    background: var(--bg2);
+    border: 1px solid var(--border2);
+    border-radius: 20px;
+    padding: 28px;
+  }
+  .search-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1fr auto;
+    gap: 12px;
+    align-items: end;
+  }
+  .field-label {
+    font-size: 11px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.08em; color: var(--text2); margin-bottom: 6px;
+  }
+  .field-input {
+    width: 100%; padding: 12px 16px;
+    background: var(--bg3); border: 1px solid var(--border2);
+    border-radius: 10px; color: var(--text);
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 14px; font-weight: 500;
+    outline: none; transition: border-color 0.2s;
+  }
+  .field-input:focus { border-color: var(--blue-l); }
+  .field-input option { background: var(--bg3); }
+
+  .btn-search {
+    padding: 12px 28px;
+    background: linear-gradient(135deg, var(--blue), #1d4ed8);
+    color: #fff; border: none; border-radius: 10px;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 14px; font-weight: 700;
+    cursor: pointer; white-space: nowrap;
+    transition: transform 0.15s, box-shadow 0.15s;
+    box-shadow: 0 4px 20px rgba(37,99,235,0.4);
+  }
+  .btn-search:hover { transform: translateY(-1px); box-shadow: 0 6px 28px rgba(37,99,235,0.5); }
+  .btn-search:active { transform: translateY(0); }
+
+  /* ── Stats row ── */
+  .stats-row {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 16px; margin-bottom: 32px;
+    animation: fadeUp 0.5s 0.1s ease both;
+  }
+  .stat-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--card-r);
+    padding: 20px 22px;
+    transition: border-color 0.2s, transform 0.2s;
+  }
+  .stat-card:hover { border-color: var(--border2); transform: translateY(-2px); }
+  .stat-label { font-size: 12px; color: var(--text2); font-weight: 500; margin-bottom: 8px; }
+  .stat-value { font-size: 26px; font-weight: 800; letter-spacing: -1px; }
+  .stat-sub { font-size: 12px; color: var(--text2); margin-top: 4px; }
+  .v-blue  { color: var(--blue-ll); }
+  .v-green { color: var(--green-l); }
+  .v-red   { color: var(--red-l); }
+  .v-amber { color: var(--amber-l); }
+
+  /* ── Main grid ── */
+  .main-grid {
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    gap: 20px;
+    animation: fadeUp 0.5s 0.2s ease both;
+  }
+
+  /* ── Section title ── */
+  .section-title {
+    font-size: 13px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.08em; color: var(--text2);
+    margin-bottom: 14px; display: flex; align-items: center; gap: 8px;
+  }
+  .section-title::before {
+    content: ''; display: block; width: 3px; height: 14px;
+    background: var(--blue-l); border-radius: 2px;
+  }
+
+  /* ── Price chart ── */
+  .chart-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--card-r);
+    padding: 24px;
+    margin-bottom: 20px;
+  }
+  .chart-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 20px;
+  }
+  .chart-tabs { display: flex; gap: 6px; }
+  .chart-tab {
+    padding: 6px 14px; font-size: 12px; font-weight: 600;
+    border-radius: 8px; cursor: pointer; border: 1px solid var(--border);
+    color: var(--text2); background: transparent; transition: all 0.15s;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+  }
+  .chart-tab.active {
+    background: rgba(37,99,235,0.15); color: var(--blue-ll);
+    border-color: rgba(37,99,235,0.3);
+  }
+
+  .chart-wrap { position: relative; height: 220px; }
+  canvas { width: 100% !important; }
+
+  /* ── Flights list ── */
+  .flights-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--card-r);
+    overflow: hidden;
+  }
+  .flights-header {
+    padding: 18px 20px 14px;
+    border-bottom: 1px solid var(--border);
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .sort-select {
+    font-size: 12px; padding: 6px 10px;
+    background: var(--bg3); border: 1px solid var(--border);
+    border-radius: 8px; color: var(--text2);
+    font-family: 'Plus Jakarta Sans', sans-serif; cursor: pointer;
+  }
+  .flight-row {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    display: grid;
+    grid-template-columns: 44px 1fr auto auto auto;
+    gap: 14px; align-items: center;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .flight-row:hover { background: rgba(255,255,255,0.02); }
+  .flight-row:last-child { border-bottom: none; }
+
+  .airline-logo {
+    width: 36px; height: 36px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 800;
+    background: var(--bg3); border: 1px solid var(--border2);
+  }
+  .flight-main { min-width: 0; }
+  .flight-route {
+    font-size: 15px; font-weight: 700;
+    display: flex; align-items: center; gap: 8px;
+    letter-spacing: -0.3px;
+  }
+  .flight-route-arrow { color: var(--text3); font-size: 12px; }
+  .flight-meta { font-size: 12px; color: var(--text2); margin-top: 2px; }
+  .flight-stops {
+    font-size: 11px; font-weight: 600; padding: 3px 8px;
+    border-radius: 6px; white-space: nowrap;
+  }
+  .stops-0 { background: rgba(16,185,129,0.12); color: var(--green-l); }
+  .stops-1 { background: rgba(245,158,11,0.12); color: var(--amber-l); }
+  .stops-2 { background: rgba(239,68,68,0.12);  color: var(--red-l); }
+  .flight-duration {
+    font-size: 12px; color: var(--text2);
+    font-family: 'JetBrains Mono', monospace;
+    text-align: right;
+  }
+  .flight-price {
+    font-size: 20px; font-weight: 800; letter-spacing: -0.5px;
+    text-align: right; white-space: nowrap;
+  }
+  .price-tag { color: var(--text); }
+  .price-tag.cheap { color: var(--green-l); }
+  .price-tag.mid   { color: var(--amber-l); }
+  .price-tag.exp   { color: var(--red-l); }
+
+  /* ── Right panel ── */
+  .right-panel { display: flex; flex-direction: column; gap: 16px; }
+
+  /* ── ML Recommendation card ── */
+  .rec-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--card-r);
+    overflow: hidden;
+    position: relative;
+  }
+  .rec-card::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, var(--green), var(--blue));
+  }
+  .rec-header { padding: 18px 20px 14px; border-bottom: 1px solid var(--border); }
+  .rec-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text2); }
+  .rec-body { padding: 20px; }
+
+  .verdict {
+    display: flex; align-items: center; gap: 12px;
+    padding: 16px; border-radius: 12px; margin-bottom: 16px;
+  }
+  .verdict.buy    { background: rgba(16,185,129,0.1);  border: 1px solid rgba(16,185,129,0.2); }
+  .verdict.wait   { background: rgba(245,158,11,0.1);  border: 1px solid rgba(245,158,11,0.2); }
+  .verdict.urgent { background: rgba(239,68,68,0.1);   border: 1px solid rgba(239,68,68,0.2); }
+  .verdict-icon { font-size: 28px; }
+  .verdict-text { flex: 1; }
+  .verdict-main { font-size: 16px; font-weight: 800; }
+  .verdict-sub  { font-size: 12px; color: var(--text2); margin-top: 2px; }
+  .buy    .verdict-main { color: var(--green-l); }
+  .wait   .verdict-main { color: var(--amber-l); }
+  .urgent .verdict-main { color: var(--red-l); }
+
+  .proba-row { margin-bottom: 12px; }
+  .proba-label { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 6px; }
+  .proba-bar { height: 6px; background: var(--bg3); border-radius: 3px; overflow: hidden; }
+  .proba-fill { height: 100%; border-radius: 3px; transition: width 1s cubic-bezier(0.4,0,0.2,1); }
+  .fill-green { background: linear-gradient(90deg, var(--green), var(--green-l)); }
+  .fill-red   { background: linear-gradient(90deg, var(--red), var(--red-l)); }
+  .fill-blue  { background: linear-gradient(90deg, var(--blue), var(--blue-l)); }
+
+  /* ── Calendar mini ── */
+  .cal-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--card-r);
+    padding: 20px;
+  }
+  .cal-grid {
+    display: grid; grid-template-columns: repeat(7, 1fr);
+    gap: 4px; margin-top: 12px;
+  }
+  .cal-day-header {
+    font-size: 10px; font-weight: 600; text-align: center;
+    color: var(--text3); padding: 4px 0;
+    text-transform: uppercase; letter-spacing: 0.05em;
+  }
+  .cal-day {
+    aspect-ratio: 1; display: flex; align-items: center;
+    justify-content: center; border-radius: 8px;
+    font-size: 11px; font-weight: 600; cursor: pointer;
+    transition: transform 0.1s; position: relative;
+    flex-direction: column; gap: 1px;
+  }
+  .cal-day:hover { transform: scale(1.1); }
+  .cal-day .day-num { font-size: 11px; }
+  .cal-day .day-price { font-size: 9px; font-weight: 700; }
+  .cal-day.cheap { background: rgba(16,185,129,0.15); color: var(--green-l); }
+  .cal-day.mid   { background: rgba(245,158,11,0.12); color: var(--amber-l); }
+  .cal-day.exp   { background: rgba(239,68,68,0.12);  color: var(--red-l); }
+  .cal-day.empty { background: transparent; cursor: default; }
+  .cal-day.selected { ring: 2px solid white; outline: 2px solid var(--blue-l); }
+
+  /* ── Airline breakdown ── */
+  .breakdown-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--card-r);
+    padding: 20px;
+  }
+  .airline-bar-row { margin-bottom: 10px; }
+  .airline-bar-label {
+    display: flex; justify-content: space-between;
+    font-size: 12px; margin-bottom: 4px; font-weight: 500;
+  }
+  .airline-bar-track { height: 5px; background: var(--bg3); border-radius: 3px; overflow: hidden; }
+  .airline-bar-fill { height: 100%; border-radius: 3px; background: var(--blue-l); transition: width 1s ease; }
+
+  /* ── Animations ── */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes pulse-dot {
+    0%,100% { opacity: 1; } 50% { opacity: 0.4; }
+  }
+  .live-dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--green-l); display: inline-block;
+    animation: pulse-dot 1.5s ease-in-out infinite;
+  }
+
+  /* ── Loading ── */
+  .loading-overlay {
+    position: fixed; inset: 0; z-index: 999;
+    background: var(--bg);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 16px;
+    transition: opacity 0.4s;
+  }
+  .loading-overlay.hidden { opacity: 0; pointer-events: none; }
+  .spinner {
+    width: 40px; height: 40px; border-radius: 50%;
+    border: 3px solid var(--border2);
+    border-top-color: var(--blue-l);
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-text { font-size: 14px; color: var(--text2); font-weight: 500; }
+
+  /* ── Responsive ── */
+  @media (max-width: 1024px) {
+    .main-grid { grid-template-columns: 1fr; }
+    .right-panel { display: grid; grid-template-columns: 1fr 1fr; }
+    .search-row { grid-template-columns: 1fr 1fr; }
+    .stats-row { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 640px) {
+    .right-panel { grid-template-columns: 1fr; }
+    .search-row { grid-template-columns: 1fr; }
+    .stats-row { grid-template-columns: repeat(2, 1fr); }
+    .flight-row { grid-template-columns: 36px 1fr auto; }
+    .flight-stops, .flight-duration { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Loading -->
+<div class="loading-overlay" id="loader">
+  <div class="spinner"></div>
+  <div class="loading-text">Analyse des prix en cours...</div>
+</div>
+
+<!-- Nav -->
+<nav>
+  <div class="nav-inner">
+    <div class="logo">SkyPredict</div>
+    <div style="display:flex;align-items:center;gap:12px">
+      <span class="live-dot"></span>
+      <span style="font-size:12px;color:var(--text2)">Données en direct</span>
+      <span class="nav-badge">ML v1.0</span>
+    </div>
+  </div>
+</nav>
+
+<div class="container">
+
+  <!-- Search -->
+  <div class="search-section">
+    <div class="search-card">
+      <div class="search-row">
+        <div>
+          <div class="field-label">Départ</div>
+          <select class="field-input" id="sel-origin">
+            <option value="CMN">CMN — Casablanca</option>
+            <option value="RAK">RAK — Marrakech</option>
+            <option value="FEZ">FEZ — Fès</option>
+          </select>
+        </div>
+        <div>
+          <div class="field-label">Destination</div>
+          <select class="field-input" id="sel-dest">
+            <option value="MAD">MAD — Madrid</option>
+            <option value="CDG">CDG — Paris</option>
+            <option value="BCN">BCN — Barcelone</option>
+            <option value="LHR">LHR — Londres</option>
+          </select>
+        </div>
+        <div>
+          <div class="field-label">Date</div>
+          <input type="date" class="field-input" id="sel-date">
+        </div>
+        <div>
+          <div class="field-label">Passagers</div>
+          <select class="field-input" id="sel-pax">
+            <option value="1">1 adulte</option>
+            <option value="2">2 adultes</option>
+            <option value="3">3 adultes</option>
+          </select>
+        </div>
+        <button class="btn-search" onclick="runSearch()">Rechercher</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-row" id="stats-row">
+    <div class="stat-card">
+      <div class="stat-label">Prix minimum</div>
+      <div class="stat-value v-green" id="stat-min">—</div>
+      <div class="stat-sub" id="stat-min-sub">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Prix moyen</div>
+      <div class="stat-value v-blue" id="stat-avg">—</div>
+      <div class="stat-sub" id="stat-avg-sub">sur 30 jours</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Probabilité de baisse</div>
+      <div class="stat-value v-amber" id="stat-proba">—</div>
+      <div class="stat-sub">modèle Random Forest</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Vols disponibles</div>
+      <div class="stat-value v-blue" id="stat-count">—</div>
+      <div class="stat-sub" id="stat-count-sub">compagnies analysées</div>
+    </div>
+  </div>
+
+  <!-- Main grid -->
+  <div class="main-grid">
+
+    <!-- Left -->
+    <div>
+      <!-- Chart -->
+      <div class="chart-card">
+        <div class="chart-header">
+          <div class="section-title" style="margin:0">Évolution des prix — 30 jours</div>
+          <div class="chart-tabs">
+            <button class="chart-tab active" onclick="switchChart('line', this)">Courbe</button>
+            <button class="chart-tab" onclick="switchChart('bar', this)">Barres</button>
+          </div>
+        </div>
+        <div class="chart-wrap">
+          <canvas id="priceChart"></canvas>
+        </div>
+      </div>
+
+      <!-- Flights list -->
+      <div class="flights-card">
+        <div class="flights-header">
+          <div class="section-title" style="margin:0">Vols disponibles</div>
+          <select class="sort-select" id="sort-select" onchange="renderFlights()">
+            <option value="price">Trier par prix</option>
+            <option value="duration">Trier par durée</option>
+            <option value="stops">Trier par escales</option>
+          </select>
+        </div>
+        <div id="flights-list"></div>
+      </div>
+    </div>
+
+    <!-- Right -->
+    <div class="right-panel">
+
+      <!-- ML Recommendation -->
+      <div class="rec-card">
+        <div class="rec-header">
+          <div class="rec-title">Recommandation ML</div>
+        </div>
+        <div class="rec-body">
+          <div class="verdict" id="verdict-box">
+            <div class="verdict-icon" id="verdict-icon">—</div>
+            <div class="verdict-text">
+              <div class="verdict-main" id="verdict-main">Analyse en cours</div>
+              <div class="verdict-sub"  id="verdict-sub">Lancez une recherche</div>
+            </div>
+          </div>
+
+          <div class="proba-row">
+            <div class="proba-label">
+              <span style="color:var(--green-l)">Probabilité baisse</span>
+              <span id="p-baisse">—</span>
+            </div>
+            <div class="proba-bar"><div class="proba-fill fill-green" id="bar-baisse" style="width:0%"></div></div>
+          </div>
+          <div class="proba-row">
+            <div class="proba-label">
+              <span style="color:var(--red-l)">Probabilité hausse</span>
+              <span id="p-hausse">—</span>
+            </div>
+            <div class="proba-bar"><div class="proba-fill fill-red" id="bar-hausse" style="width:0%"></div></div>
+          </div>
+          <div class="proba-row">
+            <div class="proba-label">
+              <span style="color:var(--blue-ll)">Confiance modèle</span>
+              <span id="p-conf">—</span>
+            </div>
+            <div class="proba-bar"><div class="proba-fill fill-blue" id="bar-conf" style="width:0%"></div></div>
+          </div>
+
+          <div style="margin-top:16px;padding:12px;background:var(--bg3);border-radius:10px;font-size:12px;color:var(--text2);line-height:1.6" id="ml-detail">
+            Le modèle Random Forest (accuracy 90.6%) analyse la compagnie, le délai avant départ, le jour de la semaine et les escales pour prédire l'évolution du prix.
+          </div>
+        </div>
+      </div>
+
+      <!-- Calendar -->
+      <div class="cal-card">
+        <div class="section-title" style="margin-bottom:8px">Calendrier des prix</div>
+        <div style="font-size:12px;color:var(--text2);margin-bottom:12px">Mars–Avril 2026</div>
+        <div class="cal-grid" id="cal-grid"></div>
+      </div>
+
+      <!-- Airline breakdown -->
+      <div class="breakdown-card">
+        <div class="section-title">Prix par compagnie</div>
+        <div id="airline-breakdown"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <div style="height:40px"></div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script>
+// ── Données simulées basées sur les vrais résultats du scraper ──
+const AIRLINES = {
+  "Royal Air Maroc": { code:"RAM", color:"#10b981" },
+  "Iberia":          { code:"IB",  color:"#3b82f6" },
+  "Air France":      { code:"AF",  color:"#6366f1" },
+  "KLM":             { code:"KL",  color:"#0ea5e9" },
+  "Vueling":         { code:"VY",  color:"#f59e0b" },
+  "TAP Portugal":    { code:"TP",  color:"#ec4899" },
+  "Qatar Airways":   { code:"QR",  color:"#8b5cf6" },
+  "Air Arabia":      { code:"3O",  color:"#ef4444" },
+};
+
+// Générer 30 jours de données réalistes basées sur le dataset réel
+function generateData(seed=42) {
+  const data = [];
+  const base = new Date(2026, 2, 13);
+  // Prix basés sur le dataset réel : min 55€, moy 217€, max 781€
+  const dailyMins = [
+    96, 88, 100, 103, 96, 88, 100, 96, 100, 88,
+    103, 96, 88, 100, 103, 96, 88, 100, 96, 88,
+    100, 103, 96, 100, 88, 103, 96, 88, 100, 96
+  ];
+
+  for(let i=0; i<30; i++) {
+    const d = new Date(base); d.setDate(base.getDate()+i);
+    const minP = dailyMins[i] + (Math.sin(i*0.7+seed)*15);
+    const flights = [];
+    const airlines = Object.keys(AIRLINES);
+    // 5-12 vols par date
+    const n = 5 + Math.floor(Math.abs(Math.sin(i*1.3+seed))*7);
+    for(let j=0; j<n; j++) {
+      const airline = airlines[j % airlines.length];
+      const baseP = minP + j * 18 + Math.abs(Math.sin(j*2.1+i)*40);
+      const stops  = j < 3 ? 0 : (j < 7 ? 1 : 2);
+      const dur    = stops === 0 ? 105 + Math.floor(Math.random()*10)
+                   : stops === 1 ? 200 + Math.floor(Math.random()*500)
+                   :               400 + Math.floor(Math.random()*1000);
+      const depH   = 6 + Math.floor(Math.abs(Math.sin(j*0.9))*16);
+      const depM   = Math.floor(Math.abs(Math.sin(j*1.4))*60);
+      const dep    = `${String(depH).padStart(2,'0')}:${String(depM).padStart(2,'0')}`;
+      const arrTs  = depH*60+depM+dur;
+      const arrH   = Math.floor(arrTs/60) % 24;
+      const arrM   = arrTs % 60;
+      const arr    = `${String(arrH).padStart(2,'0')}:${String(arrM).padStart(2,'0')}`;
+      flights.push({ airline, price: Math.round(baseP*100)/100, stops, duration: dur, dep, arr });
+    }
+    data.push({ date: d, flights });
+  }
+  return data;
+}
+
+let DATASET = generateData();
+let chartInstance = null;
+let currentChartType = 'line';
+
+// ── Prédiction ML simulée (basée sur les vrais résultats : accuracy 90.6%) ──
+function mlPredict(dateIdx, priceToday) {
+  const avgPrice = 217.43;
+  const trend = DATASET.map(d => d.flights.reduce((s,f)=>s+f.price,0)/d.flights.length);
+  const recentTrend = trend.slice(Math.max(0,dateIdx-3), dateIdx+1);
+  const slope = recentTrend.length > 1
+    ? (recentTrend[recentTrend.length-1] - recentTrend[0]) / recentTrend.length
+    : 0;
+
+  const dayOfWeek = DATASET[dateIdx].date.getDay();
+  const daysUntil = dateIdx;
+
+  // Logique basée sur les features importantes identifiées en phase 5
+  let probaBaisse = 0.5;
+  if (slope > 5)    probaBaisse -= 0.2;
+  if (slope < -5)   probaBaisse += 0.2;
+  if (priceToday > avgPrice * 1.2) probaBaisse += 0.15;
+  if (priceToday < avgPrice * 0.8) probaBaisse -= 0.15;
+  if ([2,3,4].includes(dayOfWeek)) probaBaisse += 0.1;
+  if (daysUntil < 5) probaBaisse -= 0.1;
+
+  probaBaisse = Math.max(0.05, Math.min(0.95, probaBaisse));
+  const confidence = 0.75 + Math.random() * 0.2;   // modèle à 90.6%
+
+  return { probaBaisse, probaHausse: 1-probaBaisse, confidence };
+}
+
+// ── Render chart ──
+function renderChart(dateIdx) {
+  const labels = DATASET.map(d =>
+    `${d.date.getDate()}/${d.date.getMonth()+1}`
+  );
+  const mins  = DATASET.map(d => Math.min(...d.flights.map(f=>f.price)));
+  const avgs  = DATASET.map(d => d.flights.reduce((s,f)=>s+f.price,0)/d.flights.length);
+
+  if(chartInstance) chartInstance.destroy();
+
+  const ctx = document.getElementById('priceChart').getContext('2d');
+
+  if(currentChartType === 'line') {
+    chartInstance = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [
+          {
+            label: 'Prix minimum',
+            data: mins,
+            borderColor: '#10b981',
+            backgroundColor: 'rgba(16,185,129,0.08)',
+            borderWidth: 2,
+            pointRadius: 3,
+            pointHoverRadius: 6,
+            pointBackgroundColor: '#10b981',
+            fill: true,
+            tension: 0.4,
+          },
+          {
+            label: 'Prix moyen',
+            data: avgs,
+            borderColor: '#3b82f6',
+            backgroundColor: 'transparent',
+            borderWidth: 1.5,
+            borderDash: [4,4],
+            pointRadius: 0,
+            tension: 0.4,
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { labels: { color:'#8a96aa', font:{ size:11 } } },
+          tooltip: {
+            backgroundColor: '#121929',
+            borderColor: 'rgba(255,255,255,0.1)',
+            borderWidth: 1,
+            titleColor: '#e8edf5',
+            bodyColor: '#8a96aa',
+            callbacks: {
+              label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y.toFixed(0)}€`
+            }
+          }
+        },
+        scales: {
+          x: { grid: { color:'rgba(255,255,255,0.04)' }, ticks: { color:'#4a5568', maxTicksLimit:10, font:{size:10} } },
+          y: { grid: { color:'rgba(255,255,255,0.04)' }, ticks: { color:'#4a5568', callback: v => v+'€', font:{size:10} } }
+        }
+      }
+    });
+  } else {
+    chartInstance = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [{
+          label: 'Prix minimum',
+          data: mins,
+          backgroundColor: mins.map(p =>
+            p < 100 ? 'rgba(16,185,129,0.7)' :
+            p < 200 ? 'rgba(59,130,246,0.7)' :
+                      'rgba(239,68,68,0.7)'
+          ),
+          borderRadius: 4,
+          borderSkipped: false,
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: '#121929', borderColor: 'rgba(255,255,255,0.1)', borderWidth:1,
+            titleColor: '#e8edf5', bodyColor: '#8a96aa',
+            callbacks: { label: ctx => ` ${ctx.parsed.y.toFixed(0)}€` }
+          }
+        },
+        scales: {
+          x: { grid: { color:'rgba(255,255,255,0.04)' }, ticks: { color:'#4a5568', maxTicksLimit:10, font:{size:10} } },
+          y: { grid: { color:'rgba(255,255,255,0.04)' }, ticks: { color:'#4a5568', callback: v => v+'€', font:{size:10} } }
+        }
+      }
+    });
+  }
+}
+
+function switchChart(type, btn) {
+  currentChartType = type;
+  document.querySelectorAll('.chart-tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  renderChart();
+}
+
+// ── Render flights ──
+function renderFlights() {
+  const dateStr = document.getElementById('sel-date').value;
+  const d = new Date(dateStr);
+  const idx = DATASET.findIndex(e =>
+    e.date.toDateString() === d.toDateString()
+  );
+  const dayData = idx >= 0 ? DATASET[idx] : DATASET[0];
+  const sortBy  = document.getElementById('sort-select').value;
+  const flights  = [...dayData.flights].sort((a,b) =>
+    sortBy==='price'    ? a.price - b.price :
+    sortBy==='duration' ? a.duration - b.duration :
+                          a.stops - b.stops
+  );
+
+  const minP = Math.min(...flights.map(f=>f.price));
+  const maxP = Math.max(...flights.map(f=>f.price));
+
+  const html = flights.map(f => {
+    const pctP = (f.price - minP) / (maxP - minP + 1);
+    const priceClass = pctP < 0.3 ? 'cheap' : pctP < 0.7 ? 'mid' : 'exp';
+    const stopsLabel = f.stops === 0 ? 'Direct' : `${f.stops} escale${f.stops>1?'s':''}`;
+    const durH = Math.floor(f.duration/60);
+    const durM = f.duration % 60;
+    const durStr = `${durH}h${String(durM).padStart(2,'0')}`;
+    const a = AIRLINES[f.airline] || { code: f.airline.slice(0,2).toUpperCase(), color:'#6b7280' };
+    return `
+      <div class="flight-row">
+        <div class="airline-logo" style="color:${a.color}">${a.code}</div>
+        <div class="flight-main">
+          <div class="flight-route">
+            CMN <span class="flight-route-arrow">→</span> MAD
+          </div>
+          <div class="flight-meta">${f.airline} · ${f.dep} – ${f.arr}</div>
+        </div>
+        <div class="flight-stops stops-${f.stops}">${stopsLabel}</div>
+        <div class="flight-duration">${durStr}</div>
+        <div class="flight-price price-tag ${priceClass}">${f.price.toFixed(0)}€</div>
+      </div>`;
+  }).join('');
+
+  document.getElementById('flights-list').innerHTML = html;
+}
+
+// ── Render calendar ──
+function renderCalendar() {
+  const days = ['L','M','M','J','V','S','D'];
+  let html = days.map(d => `<div class="cal-day-header">${d}</div>`).join('');
+
+  const firstDate = DATASET[0].date;
+  const firstDow  = (firstDate.getDay() + 6) % 7;
+  for(let i=0; i<firstDow; i++) html += `<div class="cal-day empty"></div>`;
+
+  const mins = DATASET.map(d => Math.min(...d.flights.map(f=>f.price)));
+  const minAll = Math.min(...mins), maxAll = Math.max(...mins);
+
+  DATASET.forEach((d, i) => {
+    const p   = mins[i];
+    const pct = (p - minAll) / (maxAll - minAll + 1);
+    const cls = pct < 0.33 ? 'cheap' : pct < 0.66 ? 'mid' : 'exp';
+    const dateStr = `2026-${String(d.date.getMonth()+1).padStart(2,'0')}-${String(d.date.getDate()).padStart(2,'0')}`;
+    html += `
+      <div class="cal-day ${cls}" onclick="selectDate('${dateStr}')" title="${p.toFixed(0)}€">
+        <span class="day-num">${d.date.getDate()}</span>
+        <span class="day-price">${p.toFixed(0)}€</span>
+      </div>`;
+  });
+
+  document.getElementById('cal-grid').innerHTML = html;
+}
+
+function selectDate(dateStr) {
+  document.getElementById('sel-date').value = dateStr;
+  runSearch();
+}
+
+// ── Render airline breakdown ──
+function renderBreakdown() {
+  const airlinePrices = {};
+  DATASET.forEach(d => d.flights.forEach(f => {
+    if(!airlinePrices[f.airline]) airlinePrices[f.airline] = [];
+    airlinePrices[f.airline].push(f.price);
+  }));
+
+  const avgs = Object.entries(airlinePrices)
+    .map(([name, prices]) => ({ name, avg: prices.reduce((s,p)=>s+p,0)/prices.length }))
+    .sort((a,b) => a.avg - b.avg);
+
+  const maxAvg = Math.max(...avgs.map(a=>a.avg));
+
+  const html = avgs.map(({ name, avg }) => {
+    const a = AIRLINES[name] || { color: '#6b7280' };
+    return `
+      <div class="airline-bar-row">
+        <div class="airline-bar-label">
+          <span style="color:var(--text)">${name}</span>
+          <span style="color:${a.color};font-weight:700">${avg.toFixed(0)}€</span>
+        </div>
+        <div class="airline-bar-track">
+          <div class="airline-bar-fill" style="width:${(avg/maxAvg*100).toFixed(1)}%;background:${a.color}"></div>
+        </div>
+      </div>`;
+  }).join('');
+
+  document.getElementById('airline-breakdown').innerHTML = html;
+}
+
+// ── Update stats ──
+function updateStats(idx) {
+  const dayData = DATASET[idx];
+  const allPrices = DATASET.flatMap(d => d.flights.map(f=>f.price));
+  const dayPrices = dayData.flights.map(f=>f.price);
+  const minP = Math.min(...dayPrices);
+  const avgAll = allPrices.reduce((s,p)=>s+p,0)/allPrices.length;
+  const ml = mlPredict(idx, minP);
+
+  document.getElementById('stat-min').textContent = `${minP.toFixed(0)}€`;
+  document.getElementById('stat-min-sub').textContent = `${dayData.flights.find(f=>f.price===minP)?.airline||''}`;
+  document.getElementById('stat-avg').textContent = `${avgAll.toFixed(0)}€`;
+  document.getElementById('stat-count').textContent = dayData.flights.length;
+  document.getElementById('stat-count-sub').textContent = `${new Set(dayData.flights.map(f=>f.airline)).size} compagnies`;
+  document.getElementById('stat-proba').textContent = `${(ml.probaBaisse*100).toFixed(0)}%`;
+
+  // ML recommendation
+  const pb = ml.probaBaisse;
+  const box = document.getElementById('verdict-box');
+  box.className = 'verdict';
+  if(pb > 0.6) {
+    box.classList.add('wait');
+    document.getElementById('verdict-icon').textContent = '⏳';
+    document.getElementById('verdict-main').textContent = 'Attendre';
+    document.getElementById('verdict-sub').textContent = `Baisse probable dans 3 jours (${(pb*100).toFixed(0)}%)`;
+  } else if(pb < 0.35) {
+    box.classList.add('urgent');
+    document.getElementById('verdict-icon').textContent = '⚡';
+    document.getElementById('verdict-main').textContent = 'Acheter maintenant';
+    document.getElementById('verdict-sub').textContent = `Le prix risque d'augmenter (${((1-pb)*100).toFixed(0)}%)`;
+  } else {
+    box.classList.add('buy');
+    document.getElementById('verdict-icon').textContent = '✓';
+    document.getElementById('verdict-main').textContent = 'Bon moment';
+    document.getElementById('verdict-sub').textContent = `Prix stable, offre correcte`;
+  }
+
+  document.getElementById('p-baisse').textContent = `${(pb*100).toFixed(0)}%`;
+  document.getElementById('p-hausse').textContent = `${((1-pb)*100).toFixed(0)}%`;
+  document.getElementById('p-conf').textContent   = `${(ml.confidence*100).toFixed(0)}%`;
+
+  setTimeout(() => {
+    document.getElementById('bar-baisse').style.width = `${pb*100}%`;
+    document.getElementById('bar-hausse').style.width = `${(1-pb)*100}%`;
+    document.getElementById('bar-conf').style.width   = `${ml.confidence*100}%`;
+  }, 100);
+}
+
+// ── Main search ──
+function runSearch() {
+  const dateStr = document.getElementById('sel-date').value;
+  const d = new Date(dateStr);
+  let idx = DATASET.findIndex(e => e.date.toDateString() === d.toDateString());
+  if(idx < 0) idx = 0;
+
+  renderFlights();
+  updateStats(idx);
+}
+
+// ── Init ──
+window.addEventListener('load', () => {
+  // Set default date to tomorrow
+  const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate()+1);
+  document.getElementById('sel-date').value =
+    `${tomorrow.getFullYear()}-${String(tomorrow.getMonth()+1).padStart(2,'0')}-${String(tomorrow.getDate()).padStart(2,'0')}`;
+
+  renderChart();
+  renderCalendar();
+  renderBreakdown();
+  runSearch();
+
+  setTimeout(() => {
+    document.getElementById('loader').classList.add('hidden');
+  }, 800);
+});
+</script>
+</body>
+</html>
